@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Spanish Learning Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals with Terracotta Accent -->
+    <!-- Application Structure Plan: A single-page, multi-section layout is used to guide the user from high-level insights to detailed exploration. It starts with a Dashboard (intro + chart) for an overview, moves to an Interactive Word Explorer for focused vocabulary learning, then to an Interactive Phrasebook for practical application, and ends with Learning Strategies. This structure breaks down the dense report into manageable, task-oriented sections, enhancing usability by allowing users to engage with words and phrases in distinct, interactive contexts rather than scrolling through static tables. -->
+    <!-- Visualization & Content Choices:
+        1. Word Type Distribution -> Goal: Inform/Analyze -> Viz: Donut Chart -> Interaction: Hover for details -> Justification: Provides a quick visual summary of the grammatical makeup of core Spanish, reinforcing the report's analysis of function words. -> Library: Chart.js.
+        2. Top 100 Words -> Goal: Organize/Explore -> Presentation: Filterable Card Grid -> Interaction: Click buttons to filter by part of speech -> Justification: Transforms a static, overwhelming table into a dynamic tool for focused study, improving usability. -> Method: HTML/CSS/JS.
+        3. Essential Phrases -> Goal: Organize/Learn -> Presentation: Accordion -> Interaction: Click to expand/collapse categories -> Justification: Organizes phrases into thematic, digestible chunks, preventing information overload and mimicking a digital phrasebook. -> Method: HTML/CSS/JS.
+        CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDF8F0;
+            color: #4A4A4A;
+        }
+        .nav-link {
+            transition: color 0.3s, border-bottom-color 0.3s;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #D97706;
+            border-bottom-color: #D97706;
+        }
+        .filter-btn {
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .filter-btn.active {
+            background-color: #D97706;
+            color: #FFFFFF;
+        }
+        .accordion-header {
+            transition: background-color 0.3s;
+        }
+        .accordion-header:hover {
+            background-color: #FBEFE1;
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 300px;
+            width: 100%;
+            max-width: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold text-[#D97706]">Essential Spanish</h1>
+            <div class="hidden md:flex space-x-8">
+                <a href="#dashboard" class="nav-link pb-1 border-b-2 border-transparent">Dashboard</a>
+                <a href="#words" class="nav-link pb-1 border-b-2 border-transparent">Word Explorer</a>
+                <a href="#phrases" class="nav-link pb-1 border-b-2 border-transparent">Phrase Guide</a>
+                <a href="#strategies" class="nav-link pb-1 border-b-2 border-transparent">Strategies</a>
+            </div>
+            <button id="mobile-menu-button" class="md:hidden text-2xl">☰</button>
+        </nav>
+        <div id="mobile-menu" class="hidden md:hidden bg-white/90">
+            <a href="#dashboard" class="block text-center py-2 nav-link">Dashboard</a>
+            <a href="#words" class="block text-center py-2 nav-link">Word Explorer</a>
+            <a href="#phrases" class="block text-center py-2 nav-link">Phrase Guide</a>
+            <a href="#strategies" class="block text-center py-2 nav-link">Strategies</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8 md:py-12">
+
+        <section id="dashboard" class="text-center mb-16 md:mb-24">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">Mastering Conversational Spanish</h2>
+            <p class="max-w-3xl mx-auto text-lg mb-8">
+                This interactive application translates the "Mastering Conversational Spanish" report into a dynamic learning tool. Focus on high-frequency words and phrases to accelerate your fluency and communicate confidently in everyday situations.
+            </p>
+            <div class="bg-white rounded-xl shadow-lg p-6 md:p-8 max-w-4xl mx-auto">
+                 <h3 class="text-2xl font-bold mb-4">Composition of the 100 Most Common Words</h3>
+                 <p class="max-w-2xl mx-auto text-base mb-6">
+                    As highlighted in the report, a large portion of the most common words are "function words" (prepositions, articles, etc.) that form the language's structure. This chart visualizes that distribution, showing why understanding their grammatical function is crucial.
+                 </p>
+                <div class="chart-container">
+                    <canvas id="wordTypesChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="words" class="mb-16 md:mb-24">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">Essential Word Explorer</h2>
+            <p class="max-w-3xl mx-auto text-lg text-center mb-8">
+                Here you'll find the 100 most used words in Spanish. Instead of a static table, you can filter by grammatical category to focus your study. Click the buttons to isolate verbs, nouns, prepositions, and more, making memorization more manageable and effective.
+            </p>
+            <div id="word-filters" class="flex flex-wrap justify-center gap-2 md:gap-4 mb-8"></div>
+            <div id="word-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+        </section>
+
+        <section id="phrases" class="mb-16 md:mb-24">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">Interactive Phrase Guide</h2>
+             <p class="max-w-3xl mx-auto text-lg text-center mb-8">
+                Moving beyond individual words is key to sounding natural. This section organizes essential phrases by conversational context. Click on each category to expand it and discover expressions you'll use in real life, from greetings and introductions to asking for help and expressing needs.
+            </p>
+            <div id="phrase-accordion" class="space-y-4 max-w-4xl mx-auto"></div>
+        </section>
+
+        <section id="strategies" class="mb-16 md:mb-24">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">Strategies for Effective Learning</h2>
+            <p class="max-w-3xl mx-auto text-lg text-center mb-8">
+                Knowing what to learn is only the first step. To achieve fluency, how you learn is crucial. This section summarizes the key strategies from the report to transform passive knowledge into an active and practical communication skill.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-xl mb-2">Spaced Repetition</h3>
+                    <p>Use flashcards and regular review sessions to ensure long-term retention of vocabulary and phrases. Consistent, spaced practice reinforces memory.</p>
+                </div>
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-xl mb-2">Contextual Learning</h3>
+                    <p>Learn words and phrases within complete sentences and real-life scenarios to understand the nuances of their usage.</p>
+                </div>
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-xl mb-2">Immersion & Practice</h3>
+                    <p>Seek opportunities to practice with native speakers. Consume Spanish media like movies, music, and podcasts.</p>
+                </div>
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-xl mb-2">Focus on Pronunciation</h3>
+                    <p>Clear pronunciation is crucial. Pay attention to Spanish intonation and rhythm to be easily understood.</p>
+                </div>
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-xl mb-2">Embrace Mistakes</h3>
+                    <p>Making errors is a natural and necessary part of learning. View them as opportunities for improvement, not obstacles.</p>
+                </div>
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h3 class="font-bold text-xl mb-2">Active Production</h3>
+                    <p>Move from recognizing words to actively using them in conversation. This is the fastest way to gain fluency.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-800 text-white text-center p-6">
+        <p>&copy; 2024 Interactive Spanish Learning Hub. Created to facilitate language learning.</p>
+    </footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const wordData = [
+        { rank: 1, word: 'de', pos: 'preposition', translation: 'of; from' },
+        { rank: 2, word: 'la', pos: 'article', translation: 'the' },
+        { rank: 3, word: 'que', pos: 'conjunction', translation: 'that, which' },
+        { rank: 4, word: 'el', pos: 'article', translation: 'the' },
+        { rank: 5, word: 'en', pos: 'preposition', translation: 'in, on' },
+        { rank: 6, word: 'y', pos: 'conjunction', translation: 'and' },
+        { rank: 7, word: 'a', pos: 'preposition', translation: 'to, at' },
+        { rank: 8, word: 'los', pos: 'article', translation: 'the' },
+        { rank: 9, word: 'se', pos: 'pronoun', translation: '-self, oneself' },
+        { rank: 10, word: 'del', pos: 'preposition', translation: 'from the' },
+        { rank: 11, word: 'las', pos: 'article', translation: 'the' },
+        { rank: 12, word: 'un', pos: 'article', translation: 'a, an' },
+        { rank: 13, word: 'por', pos: 'preposition', translation: 'by, for, through' },
+        { rank: 14, word: 'con', pos: 'preposition', translation: 'with' },
+        { rank: 15, word: 'no', pos: 'adverb', translation: 'no; not' },
+        { rank: 16, word: 'una', pos: 'article', translation: 'a, an, one' },
+        { rank: 17, word: 'su', pos: 'possessive', translation: 'his/her/its/your' },
+        { rank: 18, word: 'para', pos: 'preposition', translation: 'for, to, in order to' },
+        { rank: 19, word: 'es', pos: 'verb', translation: 'is' },
+        { rank: 20, word: 'al', pos: 'preposition', translation: 'to the' },
+        { rank: 21, word: 'lo', pos: 'pronoun', translation: 'the; it' },
+        { rank: 22, word: 'como', pos: 'conjunction', translation: 'like, as' },
+        { rank: 23, word: 'más', pos: 'adjective', translation: 'more' },
+        { rank: 24, word: 'o', pos: 'conjunction', translation: 'or' },
+        { rank: 25, word: 'pero', pos: 'conjunction', translation: 'but' },
+        { rank: 26, word: 'sus', pos: 'possessive', translation: 'his/her/its/your' },
+        { rank: 27, word: 'le', pos: 'pronoun', translation: 'to him/her' },
+        { rank: 28, word: 'ha', pos: 'verb', translation: 'has' },
+        { rank: 29, word: 'me', pos: 'pronoun', translation: 'me' },
+        { rank: 30, word: 'si', pos: 'conjunction', translation: 'if, whether' },
+        { rank: 31, word: 'sin', pos: 'preposition', translation: 'without' },
+        { rank: 32, word: 'sobre', pos: 'preposition', translation: 'on, about' },
+        { rank: 33, word: 'este', pos: 'adjective', translation: 'this' },
+        { rank: 34, word: 'ya', pos: 'adverb', translation: 'already; still' },
+        { rank: 35, word: 'entre', pos: 'preposition', translation: 'between' },
+        { rank: 36, word: 'cuando', pos: 'conjunction', translation: 'when' },
+        { rank: 37, word: 'todo', pos: 'adjective', translation: 'all, every' },
+        { rank: 38, word: 'esta', pos: 'adjective', translation: 'this' },
+        { rank: 39, word: 'ser', pos: 'verb', translation: 'to be' },
+        { rank: 40, word: 'son', pos: 'verb', translation: 'are' },
+        { rank: 41, word: 'dos', pos: 'number', translation: 'two' },
+        { rank: 42, word: 'también', pos: 'adverb', translation: 'also, too' },
+        { rank: 43, word: 'fue', pos: 'verb', translation: 'was' },
+        { rank: 44, word: 'había', pos: 'verb', translation: 'there was/were' },
+        { rank: 45, word: 'era', pos: 'verb', translation: 'was' },
+        { rank: 46, word: 'muy', pos: 'adverb', translation: 'very' },
+        { rank: 47, word: 'años', pos: 'noun', translation: 'years' },
+        { rank: 48, word: 'hasta', pos: 'preposition', translation: 'until' },
+        { rank: 49, word: 'desde', pos: 'preposition', translation: 'from; since' },
+        { rank: 50, word: 'está', pos: 'verb', translation: 'is' },
+        { rank: 51, word: 'mi', pos: 'possessive', translation: 'my' },
+        { rank: 52, word: 'porque', pos: 'conjunction', translation: 'because' },
+        { rank: 53, word: 'qué', pos: 'pronoun', translation: 'what?' },
+        { rank: 54, word: 'sólo', pos: 'adverb', translation: 'only' },
+        { rank: 55, word: 'han', pos: 'verb', translation: 'have' },
+        { rank: 56, word: 'yo', pos: 'pronoun', translation: 'I' },
+        { rank: 57, word: 'hay', pos: 'verb', translation: 'there is/are' },
+        { rank: 58, word: 'vez', pos: 'noun', translation: 'time, instance' },
+        { rank: 59, word: 'puede', pos: 'verb', translation: 'can' },
+        { rank: 60, word: 'todos', pos: 'adjective', translation: 'all; every' },
+        { rank: 61, word: 'así', pos: 'adverb', translation: 'like that' },
+        { rank: 62, word: 'nos', pos: 'pronoun', translation: 'us' },
+        { rank: 63, word: 'ni', pos: 'conjunction', translation: 'neither, nor' },
+        { rank: 64, word: 'parte', pos: 'noun', translation: 'part' },
+        { rank: 65, word: 'tiene', pos: 'verb', translation: 'has' },
+        { rank: 66, word: 'él', pos: 'pronoun', translation: 'he, it' },
+        { rank: 67, word: 'uno', pos: 'number', translation: 'one' },
+        { rank: 68, word: 'donde', pos: 'preposition', translation: 'where' },
+        { rank: 69, word: 'bien', pos: 'adjective', translation: 'fine, well' },
+        { rank: 70, word: 'tiempo', pos: 'noun', translation: 'time; weather' },
+        { rank: 71, word: 'mismo', pos: 'adjective', translation: 'same' },
+        { rank: 72, word: 'ese', pos: 'pronoun', translation: 'that' },
+        { rank: 73, word: 'ahora', pos: 'adverb', translation: 'now' },
+        { rank: 74, word: 'cada', pos: 'determiner', translation: 'each; every' },
+        { rank: 75, word: 'e', pos: 'conjunction', translation: 'and' },
+        { rank: 76, word: 'vida', pos: 'noun', translation: 'life' },
+        { rank: 77, word: 'otro', pos: 'adjective', translation: 'other, another' },
+        { rank: 78, word: 'después', pos: 'preposition', translation: 'after' },
+        { rank: 79, word: 'te', pos: 'pronoun', translation: 'you' },
+        { rank: 80, word: 'otros', pos: 'pronoun', translation: 'others' },
+        { rank: 81, word: 'aunque', pos: 'conjunction', translation: 'although' },
+        { rank: 82, word: 'esa', pos: 'adjective', translation: 'that' },
+        { rank: 83, word: 'eso', pos: 'pronoun', translation: 'that' },
+        { rank: 84, word: 'hace', pos: 'verb', translation: 'does/makes' },
+        { rank: 85, word: 'otra', pos: 'adjective', translation: 'other; another' },
+        { rank: 86, word: 'gobierno', pos: 'noun', translation: 'government' },
+        { rank: 87, word: 'tan', pos: 'adverb', translation: 'so' },
+        { rank: 88, word: 'durante', pos: 'preposition', translation: 'during' },
+        { rank: 89, word: 'siempre', pos: 'adverb', translation: 'always' },
+        { rank: 90, word: 'día', pos: 'noun', translation: 'day' },
+        { rank: 91, word: 'tanto', pos: 'adjective', translation: 'so much, so many' },
+        { rank: 92, word: 'menos', pos: 'adjective', translation: 'less, fewer' },
+        { rank: 93, word: 'nuevo', pos: 'adjective', translation: 'new' },
+        { rank: 94, word: 'encontrar', pos: 'verb', translation: 'to find' },
+        { rank: 95, word: 'seguir', pos: 'verb', translation: 'to follow' },
+        { rank: 96, word: 'dejar', pos: 'verb', translation: 'to let, leave' },
+        { rank: 97, word: 'llevar', pos: 'verb', translation: 'to take, carry' },
+        { rank: 98, word: 'hablar', pos: 'verb', translation: 'to speak, talk' },
+        { rank: 99, word: 'creer', pos: 'verb', translation: 'to believe' },
+        { rank: 100, word: 'quedar', pos: 'verb', translation: 'to remain, stay' }
+    ];
+
+    const phraseData = [
+        {
+            category: 'Greetings & Farewells',
+            phrases: [
+                { spanish: 'Hola', english: 'Hello / Hi' },
+                { spanish: 'Buenos días', english: 'Good morning' },
+                { spanish: 'Buenas tardes', english: 'Good afternoon' },
+                { spanish: 'Buenas noches', english: 'Good evening / Good night' },
+                { spanish: '¿Cómo estás?', english: 'How are you? (informal)' },
+                { spanish: '¿Cómo está usted?', english: 'How are you? (formal)' },
+                { spanish: '¿Qué tal?', english: 'What\'s up? / How are you?' },
+                { spanish: 'Bien, gracias. ¿Y tú?', english: 'Fine, thank you. And you?' },
+                { spanish: '¡Adiós!', english: 'Goodbye!' },
+                { spanish: 'Hasta luego', english: 'See you later' },
+                { spanish: 'Hasta mañana', english: 'See you tomorrow' },
+                { spanish: 'Nos vemos', english: 'See you' }
+            ]
+        },
+        {
+            category: 'Polite Expressions & Social Graces',
+            phrases: [
+                { spanish: '¡Gracias!', english: 'Thank you!' },
+                { spanish: '¡Muchas gracias!', english: 'Thank you very much!' },
+                { spanish: '¡De nada!', english: 'You\'re welcome!' },
+                { spanish: 'Por favor', english: 'Please' },
+                { spanish: '¡Perdón! / ¡Lo siento!', english: 'Excuse me! / I\'m sorry!' },
+                { spanish: '¡Disculpe!', english: 'Excuse me! (to get attention)' },
+                { spanish: 'Con permiso', english: 'Excuse me (to pass by)' },
+                { spanish: 'Buen provecho', english: 'Enjoy your meal' }
+            ]
+        },
+        {
+            category: 'Introductions & Getting to Know Others',
+            phrases: [
+                { spanish: 'Me llamo…', english: 'My name is…' },
+                { spanish: '¿Cómo te llamas?', english: 'What\'s your name? (informal)' },
+                { spanish: 'Mucho gusto', english: 'Nice to meet you' },
+                { spanish: 'Encantado/a', english: 'Pleased to meet you' },
+                { spanish: 'Soy de…', english: 'I\'m from…' },
+                { spanish: '¿De dónde eres?', english: 'Where are you from? (informal)' }
+            ]
+        },
+        {
+            category: 'Asking Questions & Seeking Help',
+            phrases: [
+                { spanish: '¿Qué hora es?', english: 'What time is it?' },
+                { spanish: '¿Cuánto cuesta?', english: 'How much does it cost?' },
+                { spanish: '¿Dónde está el baño?', english: 'Where is the bathroom?' },
+                { spanish: 'No entiendo', english: 'I don\'t understand' },
+                { spanish: '¿Puedes hablar más despacio?', english: 'Can you speak more slowly?' },
+                { spanish: '¿Habla inglés?', english: 'Do you speak English?' },
+                { spanish: 'Necesito ayuda', english: 'I need help' }
+            ]
+        },
+        {
+            category: 'Simple Responses & Expressing Needs',
+            phrases: [
+                { spanish: 'Sí', english: 'Yes' },
+                { spanish: 'No', english: 'No' },
+                { spanish: 'Claro', english: 'Of course' },
+                { spanish: 'Tal vez / Quizás', english: 'Maybe / Perhaps' },
+                { spanish: 'Estoy de acuerdo', english: 'I agree' },
+                { spanish: 'No (lo) sé', english: 'I don\'t know' },
+                { spanish: 'Tengo hambre', english: 'I\'m hungry' },
+                { spanish: 'Tengo sed', english: 'I\'m thirsty' }
+            ]
+        },
+        {
+            category: 'Common Exclamations & Well Wishes',
+            phrases: [
+                { spanish: '¡Feliz cumpleaños!', english: 'Happy birthday!' },
+                { spanish: '¡Felicidades!', english: 'Congratulations!' },
+                { spanish: '¡Buen viaje!', english: 'Have a good trip!' },
+                { spanish: '¡Buena suerte!', english: 'Good luck!' },
+                { spanish: '¡Dios mío!', english: 'Oh my god!' },
+                { spanish: '¿En serio?', english: 'Seriously?' }
+            ]
+        }
+    ];
+
+    const posCounts = wordData.reduce((acc, word) => {
+        acc[word.pos] = (acc[word.pos] || 0) + 1;
+        return acc;
+    }, {});
+
+    const posLabels = {
+        preposition: 'Preposition',
+        article: 'Article',
+        conjunction: 'Conjunction',
+        pronoun: 'Pronoun',
+        adverb: 'Adverb',
+        verb: 'Verb',
+        adjective: 'Adjective',
+        possessive: 'Possessive',
+        number: 'Number',
+        noun: 'Noun',
+        determiner: 'Determiner'
+    };
+
+    const chartLabels = Object.keys(posCounts).map(key => posLabels[key] || key);
+    const chartData = Object.values(posCounts);
+
+    const ctx = document.getElementById('wordTypesChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Word Types',
+                data: chartData,
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+                    '#C9CBCF', '#E7E9ED', '#7C8A9E', '#F67280', '#6C5B7B'
+                ],
+                borderColor: '#FDF8F0',
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        font: { size: 14 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                label += `${context.raw} words (${percentage}%)`;
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    const wordGrid = document.getElementById('word-grid');
+    const wordFiltersContainer = document.getElementById('word-filters');
+    const categories = ['All', ...Object.keys(posLabels).map(k => posLabels[k])];
+
+    const posMappingReverse = Object.fromEntries(Object.entries(posLabels).map(a => a.reverse()));
+
+    function renderWords(filter = 'All') {
+        wordGrid.innerHTML = '';
+        const filteredWords = filter === 'All'
+            ? wordData
+            : wordData.filter(word => word.pos === posMappingReverse[filter]);
+
+        filteredWords.forEach(word => {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow p-4 flex flex-col justify-between';
+            card.innerHTML = `
+                <div>
+                    <div class="flex justify-between items-baseline mb-2">
+                        <p class="text-2xl font-bold">${word.word}</p>
+                        <p class="text-sm font-semibold text-gray-400">#${word.rank}</p>
+                    </div>
+                    <p class="text-gray-600">${word.translation}</p>
+                </div>
+                <p class="text-xs text-right mt-3 font-medium text-[#D97706] uppercase">${posLabels[word.pos] || word.pos}</p>
+            `;
+            wordGrid.appendChild(card);
+        });
+    }
+
+    categories.forEach(category => {
+        const button = document.createElement('button');
+        button.textContent = category;
+        button.className = 'filter-btn px-4 py-2 rounded-full font-semibold text-sm bg-white shadow-sm';
+        if (category === 'All') {
+            button.classList.add('active');
+        }
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            renderWords(category);
+        });
+        wordFiltersContainer.appendChild(button);
+    });
+
+    const phraseAccordion = document.getElementById('phrase-accordion');
+    phraseData.forEach((categoryData, index) => {
+        const item = document.createElement('div');
+        item.className = 'bg-white rounded-xl shadow-sm overflow-hidden';
+        item.innerHTML = `
+            <div class="accordion-header w-full text-left px-6 py-4 font-bold text-lg cursor-pointer flex justify-between items-center">
+                <span>${categoryData.category}</span>
+                <span class="transform transition-transform duration-300">▼</span>
+            </div>
+            <div class="accordion-content">
+                <ul class="p-6 pt-0">
+                    ${categoryData.phrases.map(phrase => `
+                        <li class="border-t py-3">
+                            <p class="font-semibold text-base">${phrase.spanish}</p>
+                            <p class="text-gray-600 text-sm">${phrase.english}</p>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+        phraseAccordion.appendChild(item);
+    });
+
+    document.querySelectorAll('.accordion-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const content = header.nextElementSibling;
+            const arrow = header.querySelector('span:last-child');
+
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+                arrow.style.transform = 'rotate(0deg)';
+            } else {
+                document.querySelectorAll('.accordion-content').forEach(c => c.style.maxHeight = null);
+                document.querySelectorAll('.accordion-header span:last-child').forEach(a => a.style.transform = 'rotate(0deg)');
+                content.style.maxHeight = content.scrollHeight + "px";
+                arrow.style.transform = 'rotate(180deg)';
+            }
+        });
+    });
+
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+    mobileMenuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+    });
+
+    document.querySelectorAll('#mobile-menu a').forEach(link => {
+        link.addEventListener('click', () => {
+            mobileMenu.classList.add('hidden');
+        });
+    });
+
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = document.querySelectorAll('section');
+
+    window.addEventListener('scroll', () => {
+        let current = '';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            if (pageYOffset >= sectionTop - 100) {
+                current = section.getAttribute('id');
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href').includes(current)) {
+                link.classList.add('active');
+            }
+        });
+    });
+
+
+    renderWords();
+});
+</script>
+</body>
+</html>
